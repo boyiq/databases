@@ -13,15 +13,14 @@ describe('Persistent Node Chat Server', () => {
     database: 'chat',
   });
 
-  beforeAll((done) => {
+  beforeAll(() => {
     dbConnection.connect();
+  });
 
-    const tablename = 'messages'; // TODO: fill this out
-
-    /* Empty the db table before all tests so that multiple tests
-     * (or repeated runs of the tests)  will not fail when they should be passing
-     * or vice versa */
-    dbConnection.query(`truncate ${tablename}`, done);
+  beforeEach((done) => {
+    dbConnection.query('truncate users', () => {
+      dbConnection.query('truncate messages', done)
+    });
   }, 6500);
 
   afterAll(() => {
@@ -71,8 +70,38 @@ describe('Persistent Node Chat Server', () => {
     var roomname = '20';
     var username = 'Ross';
 
-    var originalMessage = 'In mercy\'s name, three days is all I need.';
-    var originalRoomname = 'Hello';
+    /* TODO: The exact query string and query args to use here
+     * depend on the schema you design, so I'll leave them up to you. */
+    // dbConnection.query(queryString, queryArgs, (err) => {
+    //   if (err) {
+    //     throw err;
+    //   }
+
+    // Now query the Node chat server and see if it returns the message we just inserted:
+    axios.post(`${API_URL}/users`, { username })
+    .then(() => {
+      return axios.post(`${API_URL}/messages`, {username, message, roomname});
+    })
+    .then(() => {
+      return axios.get(`${API_URL}/messages`)
+    })
+    .then((response) => {
+      const messageLog = response.data;
+      expect(messageLog[0].content).toEqual(message);
+      expect(messageLog[0].roomname).toEqual(roomname);
+      done();
+    })
+    .catch((err) => {
+      throw err;
+    });
+    // });
+  });
+
+  it('Should output messages with the correct username', (done) => {
+    // Let's insert a message into the db
+    var message = 'We were on a break';
+    var roomname = '20';
+    var username = 'Ross';
 
     /* TODO: The exact query string and query args to use here
      * depend on the schema you design, so I'll leave them up to you. */
@@ -91,10 +120,7 @@ describe('Persistent Node Chat Server', () => {
     })
     .then((response) => {
       const messageLog = response.data;
-      expect(messageLog[0].content).toEqual(originalMessage);
-      expect(messageLog[0].roomname).toEqual(originalRoomname);
-      expect(messageLog[1].content).toEqual(message);
-      expect(messageLog[1].roomname).toEqual(roomname);
+      expect(messageLog[0].username).toEqual(username);
       done();
     })
     .catch((err) => {
@@ -102,4 +128,6 @@ describe('Persistent Node Chat Server', () => {
     });
     // });
   });
+
+
 });
